@@ -21,8 +21,27 @@ docker compose up --build
 Then open **http://localhost:3000**.
 
 Demo users (all password `password`): `alice`, `bob`, `carol`, `dave`, `erin`.
-Edit `backend/internal/seed/data/users.json` to change them (re-seeded on every
-backend start).
+These embedded demo users are for **local dev / CI only** — see
+[Production deployment](#production-deployment) for real users.
+
+## Production deployment
+
+Real credentials must **never** live in git. Instead of the embedded demo users,
+the seeder reads users from an uncommitted file pointed to by `USERS_FILE`:
+
+```bash
+cp .env.production.example .env       # set JWT_SECRET, PUBLIC_ORIGIN, DB password
+cp users.example.json users.json      # set real usernames + strong passwords
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+The prod overlay (`docker-compose.prod.yml`) mounts `./users.json` into the
+backend and sets `USERS_FILE=/config/users.json`. `users.json` is gitignored.
+Users are re-seeded (upserted by username) on every backend start, so edit the
+file and restart to add users or change passwords.
+
+`PUBLIC_ORIGIN` must equal the exact URL users reach the app on (scheme + any
+non-standard port), or SvelteKit's CSRF check rejects logins with HTTP 403.
 
 ## What you can do
 

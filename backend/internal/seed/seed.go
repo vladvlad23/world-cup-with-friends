@@ -5,6 +5,8 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,8 +60,8 @@ func Run(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 func seedUsers(ctx context.Context, pool *pgxpool.Pool) error {
-	var users []seedUser
-	if err := readJSON("data/users.json", &users); err != nil {
+	users, err := loadSeedUsers()
+	if err != nil {
 		return err
 	}
 	for _, u := range users {
@@ -80,6 +82,32 @@ func seedUsers(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 	}
 	return nil
+}
+
+// loadSeedUsers reads the user list to seed. In production set USERS_FILE to a
+// path (mounted, uncommitted) so real credentials never live in the repo or
+// image. Without it, the embedded demo users are used (local dev / tests).
+func loadSeedUsers() ([]seedUser, error) {
+	var users []seedUser
+	if path := os.Getenv("USERS_FILE"); path != "" {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("read USERS_FILE %s: %w", path, err)
+		}
+		if err := json.Unmarshal(b, &users); err != nil {
+			return nil, fmt.Errorf("parse USERS_FILE %s: %w", path, err)
+		}
+		if len(users) == 0 {
+			return nil, fmt.Errorf("USERS_FILE %s contains no users", path)
+		}
+		log.Printf("seeding %d users from USERS_FILE=%s", len(users), path)
+		return users, nil
+	}
+	if err := readJSON("data/users.json", &users); err != nil {
+		return nil, err
+	}
+	log.Printf("seeding %d demo users (embedded — set USERS_FILE to override in production)", len(users))
+	return users, nil
 }
 
 func seedMatches(ctx context.Context, pool *pgxpool.Pool) error {

@@ -1,6 +1,8 @@
 package seed
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -49,6 +51,50 @@ func TestDateParsing(t *testing.T) {
 	if !got.Equal(want) {
 		t.Fatalf("parsed %v, want %v", got, want)
 	}
+}
+
+func TestLoadSeedUsersEmbeddedFallback(t *testing.T) {
+	t.Setenv("USERS_FILE", "") // ensure unset -> embedded demo users
+	users, err := loadSeedUsers()
+	if err != nil {
+		t.Fatalf("loadSeedUsers: %v", err)
+	}
+	if len(users) == 0 {
+		t.Fatal("expected embedded demo users")
+	}
+}
+
+func TestLoadSeedUsersFromFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "users.json")
+	if err := os.WriteFile(path, []byte(`[{"username":"realvlad","display_name":"Real Vlad","password":"s3cret","color":"#111"}]`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("USERS_FILE", path)
+
+	users, err := loadSeedUsers()
+	if err != nil {
+		t.Fatalf("loadSeedUsers: %v", err)
+	}
+	if len(users) != 1 || users[0].Username != "realvlad" {
+		t.Fatalf("got %+v, want single realvlad user", users)
+	}
+}
+
+func TestLoadSeedUsersFileErrors(t *testing.T) {
+	t.Run("missing file", func(t *testing.T) {
+		t.Setenv("USERS_FILE", filepath.Join(t.TempDir(), "nope.json"))
+		if _, err := loadSeedUsers(); err == nil {
+			t.Fatal("expected error for missing USERS_FILE")
+		}
+	})
+	t.Run("empty list", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "empty.json")
+		_ = os.WriteFile(path, []byte(`[]`), 0o600)
+		t.Setenv("USERS_FILE", path)
+		if _, err := loadSeedUsers(); err == nil {
+			t.Fatal("expected error for empty USERS_FILE")
+		}
+	})
 }
 
 func TestEmbeddedDataPresent(t *testing.T) {

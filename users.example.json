@@ -1,0 +1,5 @@
+[
+  { "username": "vlad",   "display_name": "Vlad",   "password": "REPLACE_WITH_A_STRONG_PASSWORD", "color": "#e74c3c" },
+  { "username": "friend1", "display_name": "Friend One", "password": "REPLACE_WITH_A_STRONG_PASSWORD", "color": "#3498db" },
+  { "username": "friend2", "display_name": "Friend Two", "password": "REPLACE_WITH_A_STRONG_PASSWORD", "color": "#2ecc71" }
+]

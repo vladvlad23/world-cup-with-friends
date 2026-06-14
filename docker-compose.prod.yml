@@ -1,0 +1,13 @@
+# Production overlay. Use together with the base file:
+#
+#   cp users.example.json users.json   # then edit with real users + strong passwords
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# This mounts your uncommitted ./users.json into the backend and points the
+# seeder at it via USERS_FILE, so real credentials never live in git or the image.
+services:
+  backend:
+    environment:
+      USERS_FILE: /config/users.json
+    volumes:
+      - ./users.json:/config/users.json:ro

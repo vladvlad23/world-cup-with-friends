@@ -4,6 +4,9 @@
 !.env.example
 !.env.production.example
 
+# real user credentials (use users.example.json as a template)
+/users.json
+
 # node / sveltekit
 node_modules/
 frontend/.svelte-kit/

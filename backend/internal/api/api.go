@@ -35,6 +35,7 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.auth.Middleware)
 			r.Get("/me", s.handleMe)
+			r.Post("/me/password", s.handleChangePassword)
 			r.Get("/users", s.handleUsers)
 			r.Get("/matches", s.handleMatches)
 			r.Get("/matches/{id}", s.handleMatch)

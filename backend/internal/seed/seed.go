@@ -69,13 +69,18 @@ func seedUsers(ctx context.Context, pool *pgxpool.Pool) error {
 		if err != nil {
 			return err
 		}
+		// Display name and colour always track the seed file, but the password
+		// is only (re)set from the seed while the user hasn't changed it
+		// themselves — otherwise a restart would wipe out their new password.
 		_, err = pool.Exec(ctx, `
 			INSERT INTO users (username, display_name, password_hash, color)
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (username)
 			DO UPDATE SET display_name = EXCLUDED.display_name,
-			              password_hash = EXCLUDED.password_hash,
-			              color = EXCLUDED.color`,
+			              color = EXCLUDED.color,
+			              password_hash = CASE WHEN users.password_changed
+			                                   THEN users.password_hash
+			                                   ELSE EXCLUDED.password_hash END`,
 			u.Username, u.DisplayName, string(hash), u.Color)
 		if err != nil {
 			return err

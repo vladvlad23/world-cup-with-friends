@@ -211,6 +211,62 @@ func TestMeetupLifecycle(t *testing.T) {
 	}
 }
 
+func TestChangePassword(t *testing.T) {
+	h, pool := testServer(t)
+	token, _ := login(t, h, "dave", "password")
+
+	t.Run("short new password rejected", func(t *testing.T) {
+		rec := do(t, h, http.MethodPost, "/api/me/password", token, map[string]string{
+			"current_password": "password", "new_password": "short",
+		})
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400", rec.Code)
+		}
+	})
+
+	t.Run("wrong current password rejected", func(t *testing.T) {
+		rec := do(t, h, http.MethodPost, "/api/me/password", token, map[string]string{
+			"current_password": "wrongpass", "new_password": "newpassword123",
+		})
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("status = %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("change succeeds and old password stops working", func(t *testing.T) {
+		rec := do(t, h, http.MethodPost, "/api/me/password", token, map[string]string{
+			"current_password": "password", "new_password": "newpassword123",
+		})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("change status = %d (%s)", rec.Code, rec.Body.String())
+		}
+		// New password works.
+		login(t, h, "dave", "newpassword123")
+		// Old password no longer works.
+		rec = do(t, h, http.MethodPost, "/api/auth/login", "", map[string]string{
+			"username": "dave", "password": "password",
+		})
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("old password still works (status %d)", rec.Code)
+		}
+	})
+
+	t.Run("re-seeding does not clobber a changed password", func(t *testing.T) {
+		// Simulate a backend restart: the seeder runs again.
+		if err := seed.Run(context.Background(), pool); err != nil {
+			t.Fatalf("re-seed: %v", err)
+		}
+		// dave's changed password must survive; the demo password must not return.
+		login(t, h, "dave", "newpassword123")
+		rec := do(t, h, http.MethodPost, "/api/auth/login", "", map[string]string{
+			"username": "dave", "password": "password",
+		})
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("re-seed restored the demo password (status %d)", rec.Code)
+		}
+	})
+}
+
 func TestCreateMeetupValidation(t *testing.T) {
 	h, _ := testServer(t)
 	token, _ := login(t, h, "alice", "password")

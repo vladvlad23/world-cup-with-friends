@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
     color         TEXT NOT NULL DEFAULT '#888888'
 );
 
+-- Set once a user changes their own password, so the seeder stops overwriting it.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS matches (
     id           INTEGER PRIMARY KEY,
     home_team    TEXT NOT NULL,

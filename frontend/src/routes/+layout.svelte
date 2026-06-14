@@ -1,6 +1,9 @@
 <script>
 	import '../app.css';
+	import ChangePasswordModal from '$lib/components/ChangePasswordModal.svelte';
 	export let data;
+
+	let showChangePassword = false;
 </script>
 
 <div class="shell">
@@ -10,6 +13,9 @@
 			<div class="user">
 				<span class="dot" style="background:{data.user.color}"></span>
 				<span>{data.user.display_name}</span>
+				<button class="ghost" type="button" on:click={() => (showChangePassword = true)}>
+					Change password
+				</button>
 				<form method="POST" action="/logout">
 					<button class="ghost" type="submit">Log out</button>
 				</form>
@@ -20,6 +26,10 @@
 		<slot />
 	</main>
 </div>
+
+{#if showChangePassword}
+	<ChangePasswordModal on:close={() => (showChangePassword = false)} />
+{/if}
 
 <style>
 	.shell {

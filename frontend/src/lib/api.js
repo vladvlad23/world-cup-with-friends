@@ -28,3 +28,13 @@ export async function getMeetup(id) {
 export async function joinMeetup(id) {
 	return asJson(await fetch(`/api/meetups/${id}/join`, { method: 'POST' }));
 }
+
+export async function changePassword(currentPassword, newPassword) {
+	return asJson(
+		await fetch('/api/me/password', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+		})
+	);
+}

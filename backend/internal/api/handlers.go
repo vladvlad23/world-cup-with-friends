@@ -60,6 +60,48 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+const minPasswordLen = 8
+
+func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if len(body.NewPassword) < minPasswordLen {
+		writeErr(w, http.StatusBadRequest, "new password must be at least 8 characters")
+		return
+	}
+	uid := auth.UserID(r.Context())
+
+	var hash string
+	if err := s.pool.QueryRow(r.Context(),
+		`SELECT password_hash FROM users WHERE id = $1`, uid).Scan(&hash); err != nil {
+		writeErr(w, http.StatusInternalServerError, "db error")
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.CurrentPassword)) != nil {
+		writeErr(w, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(body.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "hash error")
+		return
+	}
+	if _, err := s.pool.Exec(r.Context(),
+		`UPDATE users SET password_hash = $1, password_changed = TRUE WHERE id = $2`,
+		string(newHash), uid); err != nil {
+		writeErr(w, http.StatusInternalServerError, "could not update password")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "password updated"})
+}
+
 func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := s.listUsers(r.Context())
 	if err != nil {

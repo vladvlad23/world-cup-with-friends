@@ -27,7 +27,7 @@
 </script>
 
 <h1>Match Calendar</h1>
-<p class="lead">Click a match to propose or join a meetup.</p>
+<p class="lead">Click a match to propose or join a meetup. All times shown in Bucharest time.</p>
 
 {#each months as { year, month } (month)}
 	<section class="month">

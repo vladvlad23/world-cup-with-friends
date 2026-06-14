@@ -1,15 +1,29 @@
-// The backend stores kickoff times as the match's local wall-clock time encoded
-// as UTC (e.g. "2026-06-11T13:00:00Z"). To display the intended day/time without
-// the browser's timezone shifting it, we read the ISO string components directly.
+// The backend stores each kickoff as a correct absolute UTC instant. We display
+// everything in Bucharest time (all users are in Romania), converting both the
+// calendar day and the clock time so a late US night match lands on the right day.
+export const DISPLAY_TZ = 'Europe/Bucharest';
 
-/** "2026-06-11T13:00:00Z" -> "2026-06-11" */
+const dayFmt = new Intl.DateTimeFormat('en-CA', {
+	timeZone: DISPLAY_TZ,
+	year: 'numeric',
+	month: '2-digit',
+	day: '2-digit'
+});
+const timeFmt = new Intl.DateTimeFormat('en-GB', {
+	timeZone: DISPLAY_TZ,
+	hour: '2-digit',
+	minute: '2-digit',
+	hour12: false
+});
+
+/** ISO instant -> "YYYY-MM-DD" in Bucharest time (en-CA formats as YYYY-MM-DD). */
 export function dayKey(iso) {
-	return iso.slice(0, 10);
+	return dayFmt.format(new Date(iso));
 }
 
-/** "2026-06-11T13:00:00Z" -> "13:00" */
+/** ISO instant -> "HH:MM" in Bucharest time. */
 export function timeLabel(iso) {
-	return iso.slice(11, 16);
+	return timeFmt.format(new Date(iso));
 }
 
 const MONTHS = [

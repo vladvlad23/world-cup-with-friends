@@ -1,12 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { dayKey, timeLabel, prettyDate, buildMonth, monthName } from './date.js';
 
-describe('dayKey / timeLabel', () => {
-	it('reads the date portion of an ISO string', () => {
+describe('dayKey / timeLabel (Bucharest time)', () => {
+	it('converts an instant to the Bucharest day', () => {
+		// 13:00Z in June -> 16:00 EEST, same day.
 		expect(dayKey('2026-06-11T13:00:00Z')).toBe('2026-06-11');
 	});
-	it('reads the time portion without timezone shifting', () => {
-		expect(timeLabel('2026-06-11T13:00:00Z')).toBe('13:00');
+	it('converts an instant to the Bucharest clock time', () => {
+		expect(timeLabel('2026-06-11T13:00:00Z')).toBe('16:00');
+	});
+	it('rolls a late-night US kickoff onto the next Bucharest day', () => {
+		// 22:00Z -> 01:00 next day in Bucharest (EEST, UTC+3).
+		expect(dayKey('2026-06-23T22:00:00Z')).toBe('2026-06-24');
+		expect(timeLabel('2026-06-23T22:00:00Z')).toBe('01:00');
 	});
 });
 

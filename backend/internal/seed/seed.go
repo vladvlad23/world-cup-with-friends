@@ -8,11 +8,47 @@ import (
 	"log"
 	"os"
 	"time"
+	_ "time/tzdata" // embed the IANA tz database so LoadLocation works in distroless
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// stadiumTZ maps each venue (by stadium id) to its IANA timezone, used to turn
+// the dataset's venue-local kickoff time into a correct UTC instant.
+var stadiumTZ = map[string]string{
+	"1":  "America/Mexico_City", // Estadio Azteca, Mexico City
+	"2":  "America/Mexico_City", // Estadio Akron, Guadalajara
+	"3":  "America/Monterrey",   // Estadio BBVA, Monterrey
+	"4":  "America/Chicago",     // AT&T Stadium, Dallas
+	"5":  "America/Chicago",     // NRG Stadium, Houston
+	"6":  "America/Chicago",     // Arrowhead, Kansas City
+	"7":  "America/New_York",    // Mercedes-Benz, Atlanta
+	"8":  "America/New_York",    // Hard Rock, Miami
+	"9":  "America/New_York",    // Gillette, Boston
+	"10": "America/New_York",    // Lincoln Financial, Philadelphia
+	"11": "America/New_York",    // MetLife, New York/New Jersey
+	"12": "America/Toronto",     // BMO Field, Toronto
+	"13": "America/Vancouver",   // BC Place, Vancouver
+	"14": "America/Los_Angeles", // Lumen Field, Seattle
+	"15": "America/Los_Angeles", // Levi's, San Francisco Bay Area
+	"16": "America/Los_Angeles", // SoFi, Los Angeles
+}
+
+// kickoffInstant parses the dataset's "MM/DD/YYYY HH:MM" venue-local time in the
+// venue's timezone, yielding the correct absolute instant.
+func kickoffInstant(localDate, stadiumID string) (time.Time, error) {
+	tz := stadiumTZ[stadiumID]
+	if tz == "" {
+		tz = "UTC"
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("load tz %s: %w", tz, err)
+	}
+	return time.ParseInLocation("01/02/2006 15:04", localDate, loc)
+}
 
 //go:embed data/*.json
 var dataFS embed.FS
@@ -116,14 +152,9 @@ func loadSeedUsers() ([]seedUser, error) {
 }
 
 func seedMatches(ctx context.Context, pool *pgxpool.Pool) error {
-	var count int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM matches`).Scan(&count); err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
-
+	// Always re-sync from the embedded data (idempotent upsert), so corrections
+	// such as fixed kickoff timezones reach existing databases on the next boot.
+	// Meetups reference matches by id, which is stable, so they are preserved.
 	var matches []rawMatch
 	if err := readJSON("data/football.matches.json", &matches); err != nil {
 		return err
@@ -148,7 +179,7 @@ func seedMatches(ctx context.Context, pool *pgxpool.Pool) error {
 
 	batch := &pgx.Batch{}
 	for _, m := range matches {
-		kickoff, err := time.Parse("01/02/2006 15:04", m.LocalDate)
+		kickoff, err := kickoffInstant(m.LocalDate, m.StadiumID)
 		if err != nil {
 			return fmt.Errorf("parse date %q: %w", m.LocalDate, err)
 		}
@@ -159,7 +190,17 @@ func seedMatches(ctx context.Context, pool *pgxpool.Pool) error {
 			INSERT INTO matches
 			  (id, home_team, away_team, home_flag, away_flag, stage, group_label, kickoff, stadium_name, city, country)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-			ON CONFLICT (id) DO NOTHING`,
+			ON CONFLICT (id) DO UPDATE SET
+			  home_team = EXCLUDED.home_team,
+			  away_team = EXCLUDED.away_team,
+			  home_flag = EXCLUDED.home_flag,
+			  away_flag = EXCLUDED.away_flag,
+			  stage = EXCLUDED.stage,
+			  group_label = EXCLUDED.group_label,
+			  kickoff = EXCLUDED.kickoff,
+			  stadium_name = EXCLUDED.stadium_name,
+			  city = EXCLUDED.city,
+			  country = EXCLUDED.country`,
 			atoi(m.ID), home, away,
 			teamByID[m.HomeTeamID].Flag, teamByID[m.AwayTeamID].Flag,
 			m.Type, m.Group, kickoff,

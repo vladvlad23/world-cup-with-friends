@@ -41,15 +41,39 @@ func TestTeamName(t *testing.T) {
 	}
 }
 
-func TestDateParsing(t *testing.T) {
-	// The seed parses the upstream "MM/DD/YYYY HH:MM" local_date format.
-	got, err := time.Parse("01/02/2006 15:04", "06/11/2026 13:00")
-	if err != nil {
-		t.Fatalf("parse: %v", err)
+func TestKickoffInstant(t *testing.T) {
+	cases := []struct {
+		name      string
+		localDate string
+		stadiumID string
+		wantUTC   time.Time
+	}{
+		{
+			// Houston (NRG, stadium 5) is US Central; June -> CDT (UTC-5).
+			"houston CDT", "06/23/2026 12:00", "5",
+			time.Date(2026, time.June, 23, 17, 0, 0, 0, time.UTC),
+		},
+		{
+			// Mexico City (Estadio Azteca, stadium 1) is UTC-6, no DST.
+			"mexico city", "06/11/2026 13:00", "1",
+			time.Date(2026, time.June, 11, 19, 0, 0, 0, time.UTC),
+		},
+		{
+			// Los Angeles (SoFi, stadium 16) is Pacific; June -> PDT (UTC-7).
+			"los angeles PDT", "06/12/2026 12:00", "16",
+			time.Date(2026, time.June, 12, 19, 0, 0, 0, time.UTC),
+		},
 	}
-	want := time.Date(2026, time.June, 11, 13, 0, 0, 0, time.UTC)
-	if !got.Equal(want) {
-		t.Fatalf("parsed %v, want %v", got, want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := kickoffInstant(tc.localDate, tc.stadiumID)
+			if err != nil {
+				t.Fatalf("kickoffInstant: %v", err)
+			}
+			if !got.UTC().Equal(tc.wantUTC) {
+				t.Fatalf("got %v, want %v", got.UTC(), tc.wantUTC)
+			}
+		})
 	}
 }
 

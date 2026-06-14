@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-worldcup}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-worldcup}
+      POSTGRES_DB: ${POSTGRES_DB:-worldcup}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-worldcup} -d ${POSTGRES_DB:-worldcup}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-worldcup}:${POSTGRES_PASSWORD:-worldcup}@db:5432/${POSTGRES_DB:-worldcup}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PORT: "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8080
+      BODY_SIZE_LIMIT: "5M"
+      # adapter-node needs its public origin to pass CSRF checks on form posts.
+      # Set this to the URL users reach the app on (include the port if non-standard).
+      ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    restart: unless-stopped
+
+volumes:
+  db_data:

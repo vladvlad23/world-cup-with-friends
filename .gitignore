@@ -1,0 +1,26 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# node / sveltekit
+node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/.vite/
+frontend/coverage/
+npm-debug.log*
+yarn-error.log*
+
+# go
+backend/server
+backend/bin/
+*.test
+*.out
+coverage.txt
+
+# editor / os
+.DS_Store
+.idea/
+.vscode/
+*.swp

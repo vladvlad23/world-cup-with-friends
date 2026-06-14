@@ -1,0 +1,7 @@
+[
+  { "username": "alice", "display_name": "Alice",   "password": "password", "color": "#e74c3c" },
+  { "username": "bob",   "display_name": "Bob",     "password": "password", "color": "#3498db" },
+  { "username": "carol", "display_name": "Carol",   "password": "password", "color": "#2ecc71" },
+  { "username": "dave",  "display_name": "Dave",    "password": "password", "color": "#f39c12" },
+  { "username": "erin",  "display_name": "Erin",    "password": "password", "color": "#9b59b6" }
+]

@@ -16,6 +16,7 @@ services:
 
   backend:
     build: ./backend
+    container_name: worldcup-backend
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-worldcup}:${POSTGRES_PASSWORD:-worldcup}@db:5432/${POSTGRES_DB:-worldcup}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
@@ -29,6 +30,7 @@ services:
 
   frontend:
     build: ./frontend
+    container_name: worldcup-frontend
     environment:
       BACKEND_URL: http://backend:8080
       BODY_SIZE_LIMIT: "5M"

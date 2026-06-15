@@ -7,7 +7,8 @@
 # real user credentials (use users.example.json as a template)
 /users.json
 
-# local-only / server-specific compose overlays
+# local-only / server-specific compose files (copy from docker-compose.example.yml)
+/docker-compose.yml
 /docker-compose.nginx.yml
 
 # node / sveltekit

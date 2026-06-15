@@ -14,9 +14,13 @@ match calendar, and for any match propose a meetup, see existing ones, and join.
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env      # optionally edit secrets/ports
+cp .env.example .env                          # optionally edit secrets/ports
+cp docker-compose.example.yml docker-compose.yml
 docker compose up --build
 ```
+
+`docker-compose.yml` is gitignored (copy it from `docker-compose.example.yml`)
+so your local/server compose tweaks never conflict with `git pull`.
 
 Then open **http://localhost:3000**.
 
@@ -57,8 +61,11 @@ sets `USERS_FILE=/config/users.json`.
 
 4. **Start it:**
    ```bash
+   cp docker-compose.example.yml docker-compose.yml
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
    ```
+   `docker-compose.yml` is gitignored, so your server-specific edits (extra
+   networks, a reverse-proxy setup, etc.) never collide with `git pull`.
 
 5. **Verify the right accounts loaded.** The backend log should say
    `seeding N users from USERS_FILE=/config/users.json` (not the embedded-demo
